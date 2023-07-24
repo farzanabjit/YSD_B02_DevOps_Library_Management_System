@@ -1,0 +1,54 @@
+pipeline {
+    agent any
+
+    tools {
+        // Install the Maven version configured as "M3" and add it to the path.
+        maven "Maven_3.9.3"
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                
+                //Checking whether the repository exists or not
+                checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/farzanabjit/YSD_B02_DevOps_Library_Management_System.git']])
+                // Get some code from a GitHub repository
+            }
+        }
+        stage('Build Project') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
+        stage('Build Docker image') {
+            steps {
+                script {
+                    dockerimage1 = docker.build("farzanarahman/fimages:latest")
+                }
+            }
+        }
+        stage('Push to docker') {
+            steps {
+                script{
+                    withDockerRegistry(credentialsId: 'dockerhub') {
+                        dockerimage1.push()
+                    }
+                }
+            }
+        }
+        // stage ('Cleaning up') {
+        //     steps {
+        //         sh "docker rmi devops-automation:$BUILD_NUMBER"
+        //     }
+        // }
+        stage('Application Deploy') {
+            steps {
+                script{
+                        sh '/usr/local/bin/kubectl delete -f deployment.yml'
+                        sh '/usr/local/bin/kubectl apply -f deployment.yml'
+                        sh "/usr/local/bin/kubectl get pods"
+                    }
+                }
+            }
+        }
+    }
